@@ -2,7 +2,7 @@
 
 // Import Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, updateEmail, updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, updateEmail, updatePassword, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, query, where, getDocs, addDoc, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Global variables provided by the Canvas environment
@@ -27,11 +27,10 @@ let currentUserName = ''; // Store user's name
 // State for navigation and data filtering
 let currentCategoryFilter = ''; // For filtering models on sell.html
 let globalSearchTerm = ''; // For header search and filtering models
-let phoneBrand = ''; // For pre-filling quote form
-let phoneModel = ''; // For pre-filling quote form
-let phoneCondition = '';
-let quotePrice = null;
-let isLoading = false;
+let selectedPhoneBrand = ''; // For model-detail page
+let selectedPhoneModel = ''; // For model-detail page
+let selectedPhoneCondition = ''; // For model-detail page
+let isLoading = false; // General loading state
 
 // DOM elements (will be initialized on each page's load)
 let authStatusContainer;
@@ -252,10 +251,10 @@ export function renderNavbar() {
         }
 
         if (document.getElementById('dashboard-btn')) {
-            document.getElementById('dashboard-btn').onclick = () => { navigateTo('account.html', { view: 'dashboard' }); dropdownMenu.classList.remove('show'); };
+            document.getElementById('dashboard-btn').onclick = () => { navigateTo('profile.html', { view: 'dashboard' }); dropdownMenu.classList.remove('show'); };
         }
         if (document.getElementById('account-info-btn')) {
-            document.getElementById('account-info-btn').onclick = () => { navigateTo('account.html', { view: 'account-info' }); dropdownMenu.classList.remove('show'); };
+            document.getElementById('account-info-btn').onclick = () => { navigateTo('profile.html', { view: 'account-info' }); dropdownMenu.classList.remove('show'); };
         }
         if (document.getElementById('logout-btn')) {
             document.getElementById('logout-btn').onclick = () => { handleLogout(); dropdownMenu.classList.remove('show'); };
@@ -282,7 +281,7 @@ export async function handleLogin(e) {
     try {
         await signInWithEmailAndPassword(auth, email, password);
         showMessage('Logged in successfully!');
-        navigateTo('account.html', { view: 'dashboard' });
+        navigateTo('profile.html', { view: 'dashboard' });
     } catch (error) {
         showMessage(`Login failed: ${error.message}`);
         console.error('Login error:', error);
@@ -298,12 +297,16 @@ export async function handleRegister(e) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
+        // Send email verification
+        await sendEmailVerification(user);
+        showMessage('Registration successful! Please check your email to verify your account.');
+
+        // Save user name to Firestore in a private collection
         const userProfileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-        await setDoc(userProfileRef, { name: name, email: user.email, createdAt: new Date().toISOString() });
+        await setDoc(userProfileRef, { name: name, email: user.email, createdAt: new Date().toISOString(), emailVerified: user.emailVerified });
         currentUserName = name;
 
-        showMessage('Registered successfully! Please login.');
-        navigateTo('auth.html', { view: 'login' });
+        navigateTo('auth.html', { view: 'login', message: 'Verification email sent. Please check your inbox.' });
     } catch (error) {
         showMessage(`Registration failed: ${error.message}`);
         console.error('Registration error:', error);
@@ -337,7 +340,8 @@ export async function handleUpdateProfile(e) {
         currentUserName = updatedName;
         showMessage('Profile updated successfully!');
         renderNavbar();
-    } catch (error) {
+    }
+    catch (error) {
         showMessage(`Profile update failed: ${error.message}`);
         console.error('Profile update error:', error);
     }
@@ -350,6 +354,7 @@ export async function handleChangePassword(e) {
         return;
     }
 
+    const oldPassword = document.getElementById('old-password').value; // New: Get old password
     const newPassword = document.getElementById('new-password').value;
     const confirmNewPassword = document.getElementById('confirm-new-password').value;
 
@@ -363,108 +368,52 @@ export async function handleChangePassword(e) {
     }
 
     try {
-        await updatePassword(currentUser, newPassword);
+        // Re-authenticate user with old password before changing
+        const credential = await signInWithEmailAndPassword(auth, currentUser.email, oldPassword);
+        await updatePassword(credential.user, newPassword);
         showMessage('Password changed successfully! You might need to log in again with the new password.');
         handleLogout();
     } catch (error) {
-        showMessage(`Password change failed: ${error.message}. You might need to re-authenticate.`);
+        showMessage(`Password change failed: ${error.message}. Please ensure your old password is correct and you are recently logged in.`);
         console.error('Password change error:', error);
     }
 }
 
-// --- Quote Generation and Firestore Saving ---
-export async function handleGetQuote(e) {
+// --- Buyback Request and Firestore Saving ---
+export async function handleBuybackRequest(e) {
     e.preventDefault();
-    isLoading = true;
-    quotePrice = null;
-
-    // Re-render the quote page content to reflect loading state
-    renderQuotePageContent(); // Call specific render for quote page
-
-    if (!phoneBrand || !phoneModel || !phoneCondition) {
-        showMessage('Please fill in all phone details to get a quote.');
-        isLoading = false;
-        renderQuotePageContent(); // Re-render to clear loading state
+    if (!currentUser) {
+        showMessage('You must be logged in to start a buyback request.');
         return;
     }
 
-    const makeApiCall = async (retries = 0) => {
-        const maxRetries = 5;
-        const baseDelay = 1000;
+    selectedPhoneCondition = document.getElementById('phone-condition').value;
 
-        try {
-            const prompt = `Generate a fair buyback price for a ${phoneBrand} ${phoneModel} in ${phoneCondition} condition. Provide only the price in USD, without any other text or currency symbols. For iPhone 11 and newer, and Samsung S9 and newer. iPhones 11-12 range $150-300, 13-14 range $250-500, 15+ range $400-800. Samsung S9-S10 range $100-200, S20-S21 range $150-350, S22+ range $300-600. Adjust based on condition (e.g., 'Excellent' +20%, 'Good' +0%, 'Fair' -20%, 'Poor' -40%).`;
-            let chatHistory = [];
-            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-            const payload = { contents: chatHistory };
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                if (response.status === 429 && retries < maxRetries) {
-                    const delay = baseDelay * Math.pow(2, retries) + Math.random() * 1000;
-                    await new Promise(res => setTimeout(res, delay));
-                    return makeApiCall(retries + 1);
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-
-            if (result.candidates && result.candidates.length > 0 &&
-                result.candidates[0].content && result.candidates[0].content.parts &&
-                result.candidates[0].content.parts.length > 0) {
-                const text = result.candidates[0].content.parts[0].text;
-                const price = parseFloat(text.replace(/[^0-9.]/g, ''));
-                if (!isNaN(price)) {
-                    quotePrice = price;
-                    showMessage('Quote generated successfully!');
-                } else {
-                    showMessage('Could not generate a valid price. Please try again.');
-                }
-            } else {
-                showMessage('Error generating quote: No response from AI.');
-            }
-        } catch (error) {
-            showMessage(`Error generating quote: ${error.message}`);
-            console.error('Quote generation error:', error);
-        } finally {
-            isLoading = false;
-            renderQuotePageContent(); // Re-render to show quote or stop loading
-        }
-    };
-
-    makeApiCall();
-}
-
-export async function saveQuote() {
-    if (!db || !currentUser || quotePrice === null) {
-        showMessage('Cannot save quote: User not logged in or no quote generated.');
+    if (!selectedPhoneBrand || !selectedPhoneModel || !selectedPhoneCondition) {
+        showMessage('Please select phone details and condition.');
         return;
     }
 
     try {
-        const publicDataRef = collection(db, 'artifacts', appId, 'public', 'data', 'quotes');
-        await addDoc(publicDataRef, {
+        const buybackRequestsRef = collection(db, 'artifacts', appId, 'public', 'data', 'buybackRequests');
+        await addDoc(buybackRequestsRef, {
             userId: currentUser.uid,
-            brand: phoneBrand,
-            model: phoneModel,
-            condition: phoneCondition,
-            price: quotePrice,
-            timestamp: new Date().toISOString()
+            userName: currentUserName || currentUser.email,
+            brand: selectedPhoneBrand,
+            model: selectedPhoneModel,
+            condition: selectedPhoneCondition,
+            status: 'Pending Shipment', // Initial status
+            requestDate: new Date().toISOString()
         });
-        showMessage('Quote saved successfully!');
+        showMessage('Buyback request submitted! Please follow the instructions to ship your device.');
+        // Redirect to dashboard or a confirmation page
+        navigateTo('profile.html', { view: 'dashboard', message: 'Buyback request submitted!' });
     } catch (error) {
-        showMessage(`Error saving quote: ${error.message}`);
-        console.error('Error saving quote:', error);
+        showMessage(`Error submitting request: ${error.message}`);
+        console.error('Buyback request error:', error);
     }
 }
+
 
 // --- Page Specific Render Functions (Called by each HTML file) ---
 
@@ -484,7 +433,7 @@ export function renderHomePageContent() {
                 <img src="${item.img}" alt="${item.brand} ${item.model}" class="mb-4 rounded-md w-32 h-48 object-contain"/>
                 <h3 class="text-xl font-semibold mb-2">${item.brand} ${item.model}</h3>
                 <p class="text-gray-600 text-sm mb-4">Starting from $${item.conditions[0].range.match(/\$(\d+)/)?.[1] || '---'}</p>
-                <button onclick="main.navigateTo('quote.html', { brand: '${item.brand}', model: '${item.model}' })" class="bg-indigo-500 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-600 transition duration-300">Get Quote</button>
+                <button onclick="main.navigateTo('model-detail.html', { brand: '${item.brand}', model: '${item.model}' })" class="bg-indigo-500 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-600 transition duration-300">Sell This</button>
             </div>
         `).join('');
     } else {
@@ -675,8 +624,8 @@ export function renderSellPageContent() {
                                 </li>
                             `).join('')}
                         </ul>
-                        <button data-brand="${item.brand}" data-model="${item.model}" class="get-quote-model-btn mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition duration-300 ease-in-out font-semibold">
-                            Get Quote for this Model
+                        <button data-brand="${item.brand}" data-model="${item.model}" class="select-model-btn mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition duration-300 ease-in-out font-semibold">
+                            Select This Phone
                         </button>
                     </div>
                 `).join('')}
@@ -695,9 +644,6 @@ export function renderSellPageContent() {
             <div class="w-full">
                 ${modelsHtml}
             </div>
-            <button id="proceed-custom-quote-btn" class="mt-8 bg-indigo-600 text-white px-6 py-3 rounded-md shadow-lg hover:bg-indigo-700 transition duration-300 ease-in-out font-bold text-lg">
-                Proceed to Custom Quote
-            </button>
             <button id="back-to-home-from-sell" class="mt-4 text-indigo-600 hover:underline">
                 Back to Homepage
             </button>
@@ -720,109 +666,98 @@ export function renderSellPageContent() {
             renderSellPageContent(); // Re-render to filter models
         };
     }
-    document.querySelectorAll('.get-quote-model-btn').forEach(button => {
+    document.querySelectorAll('.select-model-btn').forEach(button => {
         button.onclick = (event) => {
-            phoneBrand = event.target.dataset.brand;
-            phoneModel = event.target.dataset.model;
-            phoneCondition = ''; // Reset condition
-            quotePrice = null; // Reset quote price
-            isLoading = false; // Reset loading state
-            navigateTo('quote.html', { brand: phoneBrand, model: phoneModel });
+            const brand = event.target.dataset.brand;
+            const model = event.target.dataset.model;
+            navigateTo('model-detail.html', { brand: brand, model: model });
         };
     });
-    const proceedCustomQuoteBtn = document.getElementById('proceed-custom-quote-btn');
-    if (proceedCustomQuoteBtn) {
-        proceedCustomQuoteBtn.onclick = () => {
-            phoneBrand = '';
-            phoneModel = '';
-            phoneCondition = '';
-            quotePrice = null;
-            isLoading = false;
-            navigateTo('quote.html');
-        };
-    }
     const backToHomeFromSell = document.getElementById('back-to-home-from-sell');
     if (backToHomeFromSell) {
         backToHomeFromSell.onclick = () => navigateTo('index.html');
     }
 }
 
-// Render function for quote.html
-export function renderQuotePageContent() {
+// Render function for model-detail.html
+export function renderModelDetailPageContent() {
     appContentDiv = document.getElementById('app-content');
     if (!appContentDiv) return;
 
     // Read URL parameters for pre-filling
     const urlParams = new URLSearchParams(window.location.search);
-    phoneBrand = urlParams.get('brand') || phoneBrand;
-    phoneModel = urlParams.get('model') || phoneModel;
+    selectedPhoneBrand = urlParams.get('brand') || '';
+    selectedPhoneModel = urlParams.get('model') || '';
+
+    const phone = allPopularModels.find(p => p.brand === selectedPhoneBrand && p.model === selectedPhoneModel);
+
+    if (!phone) {
+        appContentDiv.innerHTML = `
+            <div class="flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-xl max-w-md w-full">
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Phone Not Found</h2>
+                <p class="text-gray-600 mb-4">The requested phone model could not be found. Please go back and select a valid model.</p>
+                <button onclick="main.navigateTo('sell.html')" class="mt-4 bg-indigo-600 text-white p-3 rounded-md hover:bg-indigo-700 transition duration-300 ease-in-out font-semibold">
+                    Browse All Models
+                </button>
+            </div>
+        `;
+        return;
+    }
 
     appContentDiv.innerHTML = `
-        <div class="flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-xl max-w-md w-full">
-            <h2 class="text-3xl font-bold mb-6 text-gray-800">Get a Quote</h2>
-            <form id="quote-form" class="w-full space-y-4">
-                <select id="phone-brand" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                    <option value="">Select Brand</option>
-                    <option value="iPhone" ${phoneBrand === 'iPhone' ? 'selected' : ''}>iPhone</option>
-                    <option value="Samsung" ${phoneBrand === 'Samsung' ? 'selected' : ''}>Samsung</option>
-                    <option value="Google" ${phoneBrand === 'Google' ? 'selected' : ''}>Google</option>
-                    <option value="Tablet" ${phoneBrand === 'Tablet' ? 'selected' : ''}>Tablet</option>
-                </select>
-                <input type="text" id="phone-model" placeholder="Model (e.g., 12 Pro Max, S23 Ultra)" value="${phoneModel}" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required/>
+        <div class="flex flex-col items-center p-6 bg-white rounded-lg shadow-xl max-w-2xl w-full">
+            <h2 class="text-3xl font-bold mb-6 text-gray-800">Sell Your ${phone.brand} ${phone.model}</h2>
+            <div class="flex flex-col md:flex-row items-center md:items-start gap-8 w-full mb-8">
+                <img src="${phone.img}" alt="${phone.brand} ${phone.model}" class="w-48 h-64 object-contain rounded-lg shadow-md"/>
+                <div class="text-left flex-grow">
+                    <p class="text-lg text-gray-700 mb-4">Select the condition of your device to start the buyback process. We'll provide a final quote after inspection.</p>
+                    <h3 class="text-xl font-semibold mb-2 text-gray-800">Condition Guidelines & Estimated Ranges:</h3>
+                    <ul class="list-disc list-inside text-gray-700 space-y-2">
+                        ${phone.conditions.map(cond => `
+                            <li><span class="font-semibold">${cond.range}:</span> ${cond.desc}</li>
+                        `).join('')}
+                    </ul>
+                </div>
+            </div>
+
+            <form id="buyback-request-form" class="w-full space-y-4">
+                <label for="phone-condition" class="block text-left text-gray-700 font-semibold">Select Condition:</label>
                 <select id="phone-condition" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                    <option value="">Select Condition</option>
-                    <option value="Excellent" ${phoneCondition === 'Excellent' ? 'selected' : ''}>Excellent</option>
-                    <option value="Good" ${phoneCondition === 'Good' ? 'selected' : ''}>Good</option>
-                    <option value="Fair" ${phoneCondition === 'Fair' ? 'selected' : ''}>Fair</option>
-                    <option value="Poor" ${phoneCondition === 'Poor' ? 'selected' : ''}>Poor</option>
+                    <option value="">-- Choose Condition --</option>
+                    <option value="Excellent">Excellent</option>
+                    <option value="Good">Good</option>
+                    <option value="Fair">Fair</option>
+                    <option value="Poor">Poor</option>
+                    <option value="Damaged">Damaged</option>
                 </select>
-                <button type="submit" id="get-quote-btn" class="w-full bg-indigo-600 text-white p-3 rounded-md hover:bg-indigo-700 transition duration-300 ease-in-out font-semibold" ${isLoading ? 'disabled' : ''}>
-                    ${isLoading ? 'Generating...' : 'Get Quote'}
+                <button type="submit" id="start-buyback-btn" class="w-full bg-green-600 text-white p-3 rounded-md hover:bg-green-700 transition duration-300 ease-in-out font-semibold">
+                    Start Buyback Process
                 </button>
             </form>
-            ${quotePrice !== null ? `
-                <div class="mt-6 p-4 bg-indigo-100 rounded-md w-full text-center">
-                    <p class="text-xl font-bold text-indigo-800">Estimated Buyback Price: $${quotePrice.toFixed(2)}</p>
-                    <button id="save-quote-btn" class="mt-4 bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition duration-300 ease-in-out font-semibold">
-                        Save Quote
-                    </button>
-                </div>
-            ` : ''}
-            <button id="back-to-sell-page" class="mt-4 text-indigo-600 hover:underline">
-                Back to Sell Page
+
+            <p class="text-sm text-gray-500 mt-6">
+                After you submit your request, we'll send you a free shipping label. Once we receive and inspect your device, we'll provide a final offer. If you accept, we'll pay you! If not, we'll ship it back to you for free.
+            </p>
+
+            <button onclick="main.navigateTo('sell.html')" class="mt-8 text-indigo-600 hover:underline">
+                Back to All Models
             </button>
         </div>
     `;
 
-    // Attach event listeners for elements specific to this page
-    const phoneBrandSelect = document.getElementById('phone-brand');
-    if (phoneBrandSelect) {
-        phoneBrandSelect.onchange = (e) => phoneBrand = e.target.value;
-    }
-    const phoneModelInput = document.getElementById('phone-model');
-    if (phoneModelInput) {
-        phoneModelInput.oninput = (e) => phoneModel = e.target.value;
+    // Attach event listeners
+    const buybackRequestForm = document.getElementById('buyback-request-form');
+    if (buybackRequestForm) {
+        buybackRequestForm.onsubmit = main.handleBuybackRequest;
     }
     const phoneConditionSelect = document.getElementById('phone-condition');
     if (phoneConditionSelect) {
-        phoneConditionSelect.onchange = (e) => phoneCondition = e.target.value;
-    }
-    const quoteForm = document.getElementById('quote-form');
-    if (quoteForm) {
-        quoteForm.onsubmit = handleGetQuote;
-    }
-    const saveQuoteBtn = document.getElementById('save-quote-btn');
-    if (saveQuoteBtn) {
-        saveQuoteBtn.onclick = saveQuote;
-    }
-    const backToSellPageBtn = document.getElementById('back-to-sell-page');
-    if (backToSellPageBtn) {
-        backToSellPageBtn.onclick = () => navigateTo('sell.html');
+        phoneConditionSelect.onchange = (e) => selectedPhoneCondition = e.target.value;
     }
 }
 
-// Render function for account.html
-export function renderAccountPageContent() {
+// Render function for profile.html
+export function renderProfilePageContent() {
     appContentDiv = document.getElementById('app-content');
     if (!appContentDiv) return;
 
@@ -836,14 +771,14 @@ export function renderAccountPageContent() {
                 <h2 class="text-3xl font-bold mb-6 text-gray-800">Welcome, ${currentUserName || currentUser?.email || 'User'}!</h2>
                 ${currentUserId ? `<p class="text-sm text-gray-500 mb-4">Your User ID: ${currentUserId}</p>` : ''}
                 <div class="w-full space-y-4">
-                    <button id="dashboard-new-quote-btn" class="w-full bg-green-600 text-white p-3 rounded-md hover:bg-green-700 transition duration-300 ease-in-out font-semibold">
-                        Get a New Buyback Quote
+                    <button id="dashboard-new-buyback-btn" class="w-full bg-green-600 text-white p-3 rounded-md hover:bg-green-700 transition duration-300 ease-in-out font-semibold">
+                        Start New Buyback
                     </button>
-                    <button id="dashboard-browse-models-btn" class="w-full bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700 transition duration-300 ease-in-out font-semibold">
-                        Browse Models
+                    <button id="dashboard-view-requests-btn" class="w-full bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700 transition duration-300 ease-in-out font-semibold">
+                        View My Buyback Requests
                     </button>
                     <button id="dashboard-account-info-btn" class="w-full bg-yellow-600 text-white p-3 rounded-md hover:bg-yellow-700 transition duration-300 ease-in-out font-semibold">
-                        Account Info
+                        Account Settings
                     </button>
                     <button id="dashboard-logout-btn" class="w-full bg-red-600 text-white p-3 rounded-md hover:bg-red-700 transition duration-300 ease-in-out font-semibold">
                         Logout
@@ -854,7 +789,7 @@ export function renderAccountPageContent() {
     } else if (subView === 'account-info') {
         contentHtml = `
             <div class="flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-xl max-w-md w-full">
-                <h2 class="text-3xl font-bold mb-6 text-gray-800">Account Information</h2>
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Account Settings</h2>
                 <form id="update-profile-form" class="w-full space-y-4 mb-6">
                     <label for="account-name" class="block text-left text-gray-700 font-semibold">Name:</label>
                     <input type="text" id="account-name" placeholder="Your Name" value="${currentUserName || ''}" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
@@ -870,6 +805,8 @@ export function renderAccountPageContent() {
 
                 <h3 class="text-2xl font-bold mb-4 text-gray-800">Change Password</h3>
                 <form id="change-password-form" class="w-full space-y-4">
+                    <label for="old-password" class="block text-left text-gray-700 font-semibold">Old Password:</label>
+                    <input type="password" id="old-password" placeholder="Enter Old Password" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required/>
                     <label for="new-password" class="block text-left text-gray-700 font-semibold">New Password:</label>
                     <input type="password" id="new-password" placeholder="Enter New Password" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required/>
                     <label for="confirm-new-password" class="block text-left text-gray-700 font-semibold">Confirm New Password:</label>
@@ -889,17 +826,17 @@ export function renderAccountPageContent() {
 
     // Attach event listeners for elements specific to this page
     if (subView === 'dashboard') {
-        const dashboardNewQuoteBtn = document.getElementById('dashboard-new-quote-btn');
-        if (dashboardNewQuoteBtn) {
-            dashboardNewQuoteBtn.onclick = () => navigateTo('quote.html');
+        const dashboardNewBuybackBtn = document.getElementById('dashboard-new-buyback-btn');
+        if (dashboardNewBuybackBtn) {
+            dashboardNewBuybackBtn.onclick = () => navigateTo('sell.html');
         }
-        const dashboardBrowseModelsBtn = document.getElementById('dashboard-browse-models-btn');
-        if (dashboardBrowseModelsBtn) {
-            dashboardBrowseModelsBtn.onclick = () => navigateTo('sell.html');
+        const dashboardViewRequestsBtn = document.getElementById('dashboard-view-requests-btn');
+        if (dashboardViewRequestsBtn) {
+            dashboardViewRequestsBtn.onclick = () => showMessage('Feature coming soon: View your past buyback requests!'); // Placeholder
         }
         const dashboardAccountInfoBtn = document.getElementById('dashboard-account-info-btn');
         if (dashboardAccountInfoBtn) {
-            dashboardAccountInfoBtn.onclick = () => navigateTo('account.html', { view: 'account-info' });
+            dashboardAccountInfoBtn.onclick = () => navigateTo('profile.html', { view: 'account-info' });
         }
         const dashboardLogoutBtn = document.getElementById('dashboard-logout-btn');
         if (dashboardLogoutBtn) {
@@ -916,7 +853,7 @@ export function renderAccountPageContent() {
         }
         const backToDashboardFromAccount = document.getElementById('back-to-dashboard-from-account');
         if (backToDashboardFromAccount) {
-            backToDashboardFromAccount.onclick = () => navigateTo('account.html', { view: 'dashboard' });
+            backToDashboardFromAccount.onclick = () => navigateTo('profile.html', { view: 'dashboard' });
         }
     }
 }
@@ -928,12 +865,14 @@ export function renderAuthPageContent() {
 
     const urlParams = new URLSearchParams(window.location.search);
     const subView = urlParams.get('view') || 'login'; // Default to login
+    const initialMessage = urlParams.get('message') || ''; // Read message from URL
 
     let contentHtml = '';
     if (subView === 'login') {
         contentHtml = `
             <div class="flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-xl max-w-md w-full">
                 <h2 class="text-3xl font-bold mb-6 text-gray-800">Login</h2>
+                ${initialMessage ? `<p class="text-green-600 mb-4">${initialMessage}</p>` : ''}
                 <form id="login-form" class="w-full space-y-4">
                     <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required/>
                     <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required/>
@@ -1041,7 +980,7 @@ export function initApp(pageType) {
 
             // If on auth page and logged in, redirect to dashboard
             if (window.location.pathname.includes('auth.html')) {
-                navigateTo('account.html', { view: 'dashboard' });
+                navigateTo('profile.html', { view: 'dashboard' });
             }
 
         } else {
@@ -1051,7 +990,7 @@ export function initApp(pageType) {
             showMessage('Please login or register.');
 
             // If on a protected page (dashboard, account-info) and not logged in, redirect to login
-            if (window.location.pathname.includes('account.html')) {
+            if (window.location.pathname.includes('profile.html')) {
                 navigateTo('auth.html', { view: 'login' });
             }
 
@@ -1077,11 +1016,11 @@ export function initApp(pageType) {
         case 'sell':
             renderSellPageContent();
             break;
-        case 'quote':
-            renderQuotePageContent();
+        case 'model-detail': // New page type
+            renderModelDetailPageContent();
             break;
-        case 'account':
-            renderAccountPageContent();
+        case 'profile': // New page type
+            renderProfilePageContent();
             break;
         case 'auth':
             renderAuthPageContent();
