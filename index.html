@@ -3,240 +3,236 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SwiftBuyBack - Sell Your Phone</title>
+    <title>SwiftBuyBack - Turn Your Old Phone into Cash!</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Import Inter font */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-        }
-        .button-effect {
-            transition: all 0.3s ease;
-        }
-        .button-effect:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        /* Custom styles for dropdown */
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            background-color: white;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 10;
-            border-radius: 0.375rem;
-            right: 0;
-            margin-top: 0.5rem;
-        }
-        .dropdown-menu.show {
-            display: block;
-        }
-        .dropdown-menu button {
-            color: #1f2937;
-            padding: 0.5rem 1rem;
-            text-decoration: none;
-            display: block;
-            width: 100%;
-            text-align: left;
-            border-radius: 0.375rem;
-        }
-        .dropdown-menu button:hover {
-            background-color: #f3f4f6;
-        }
-        .dropdown-menu button.logout {
-            color: #dc2626;
-        }
-
-        /* Specific styles for the homepage hero image and text */
-        .hero-section {
-            background-image: url('https://images.unsplash.com/photo-1610945415295-d979000a6e4d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w1NzI5MjZ8MHwxfHNlYXJjaHw0OXx8cGhvbmUlMjBidXliYWNrfGVufDB8fHx8MTcwMTkxNjYzMXww&ixlib=rb-4.0.3&q=80&w=1080');
-            background-size: cover;
-            background-position: center;
-            height: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 2rem;
-            border-radius: 0.75rem;
-            position: relative;
-            overflow: hidden;
-        }
-        .hero-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%);
-            border-radius: 0.75rem;
-        }
-        .hero-content {
-            z-index: 2;
-            color: white;
-            text-align: left;
-            max-width: 500px;
-        }
-
-        /* Category Card styles */
-        .category-card {
-            min-height: 200px;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            padding: 1rem;
-            background-color: #f3f4f6;
-            border-radius: 0.75rem;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            cursor: pointer;
-        }
-        .category-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
-        }
-        .category-card img {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            max-height: 90%;
-            max-width: 90%;
-            object-fit: contain;
-            z-index: 0;
-        }
-        .category-card-content {
-            position: relative;
-            z-index: 1;
-            text-align: left;
-            color: #1f2937;
-        }
-        .category-card-content h3 {
-            font-weight: 700;
-            font-size: 1.25rem;
-            margin-bottom: 0.25rem;
-        }
-        .category-card-content span {
-            display: flex;
-            align-items: center;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: #4f46e5;
-        }
-        .category-card-content svg {
-            margin-left: 0.25rem;
-            width: 1rem;
-            height: 1rem;
-        }
-        /* Background colors for categories (example) */
-        .bg-category-orange { background-color: #fdbd8d; }
-        .bg-category-purple { background-color: #c4b5fd; }
-        .bg-category-teal { background-color: #99f6e4; }
-        .bg-category-pink { background-color: #fbcfe8; }
-
-        /* Testimonial Card styles */
-        .testimonial-card {
-            background-color: #e0f2fe;
-            padding: 1.5rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 180px;
-        }
-        .testimonial-card .icon {
-            font-size: 2.5rem;
-            margin-bottom: 0.75rem;
-            color: #2563eb;
-        }
-        .testimonial-card p {
-            font-style: italic;
-            color: #374151;
-            margin-bottom: 0.5rem;
-        }
-        .testimonial-card .author {
-            font-weight: 600;
-            color: #1f2937;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 flex flex-col items-center p-4 font-sans relative">
+<body class="bg-gray-50 text-gray-800">
 
-    <!-- Top Info Banner -->
-    <div class="w-full bg-gray-800 text-white text-center py-2 text-sm">
-        Over 5.7 Million Devices Bought & Sold Since 2020
-    </div>
-
-    <!-- Header / Navbar -->
-    <header class="w-full bg-white shadow-md rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between mb-6 z-10">
-        <div class="flex items-center mb-4 sm:mb-0">
-            <h1 class="text-3xl font-extrabold text-indigo-700 mr-4 cursor-pointer" onclick="main.navigateTo('index.html')">SwiftBuyBack</h1>
-            <input type="text" id="header-search-input" placeholder="Search for phones, Samsung Galaxy, Google..."
-                   class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-xs sm:max-w-md"
-                   aria-label="Search for phones">
+    <!-- Header -->
+    <header class="bg-white shadow-sm py-4">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold text-indigo-700 rounded-md p-2">SwiftBuyBack</a>
+            <nav class="space-x-4">
+                <a href="/sell-device.html" class="text-gray-600 hover:text-indigo-700 font-medium rounded-md px-3 py-2 transition duration-300">Sell Your Device</a>
+                <a href="/login.html" class="text-gray-600 hover:text-indigo-700 font-medium rounded-md px-3 py-2 transition duration-300">Login</a>
+            </nav>
         </div>
-        <nav class="flex items-center space-x-4">
-            <button onclick="main.navigateTo('sell.html')" class="text-gray-700 hover:text-indigo-600 font-semibold px-3 py-2 rounded-md">Sell Your Device</button>
-            <div id="auth-status-container" class="relative">
-                <!-- Login/User Account button will be dynamically loaded here by JavaScript -->
-            </div>
-        </nav>
     </header>
 
-    <!-- Main Content Area (for homepage content) -->
-    <div id="app-content" class="flex flex-col items-center justify-center bg-white rounded-lg shadow-xl max-w-6xl w-full text-center">
-        <!-- Homepage content will be rendered here by main.js -->
-    </div>
+    <!-- Hero Section -->
+    <section class="bg-indigo-700 text-white py-20 text-center rounded-b-3xl mx-auto mt-4 max-w-7xl shadow-lg">
+        <div class="container mx-auto px-4">
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">Turn Your Old Phone into Cash!</h1>
+            <p class="text-lg md:text-xl mb-8 opacity-90">Quick, easy, and transparent buyback for iPhones and Samsung Galaxy devices.</p>
+            <a href="/sell-device.html" class="bg-white text-indigo-700 px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:bg-gray-100 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50 inline-block">
+                Sell Your Phone Now!
+            </a>
+        </div>
+    </section>
 
-    <!-- Message Display -->
-    <div id="message-display" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg text-sm hidden">
-        <!-- Messages will appear here -->
-    </div>
+    <!-- Feature Highlights -->
+    <section class="container mx-auto px-4 py-16">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <div class="text-indigo-600 text-4xl mb-4">📦</div>
+                <h3 class="text-xl font-semibold mb-2">Hassle-Free Returns</h3>
+                <p class="text-gray-600">Enjoy peace of mind with our 30-day return policy.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <div class="text-indigo-600 text-4xl mb-4">🚚</div>
+                <h3 class="text-xl font-semibold mb-2">Free Shipping</h3>
+                <p class="text-gray-600">Ship your device to us at no cost to you.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <div class="text-indigo-600 text-4xl mb-4">🔍</div>
+                <h3 class="text-xl font-semibold mb-2">Certified Inspection</h3>
+                <p class="text-gray-600">Every device undergoes a thorough 55-point inspection.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <div class="text-indigo-600 text-4xl mb-4">📞</div>
+                <h3 class="text-xl font-semibold mb-2">Dedicated Support</h3>
+                <p class="text-gray-600">Customer service available 7 days a week.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Shop by Category -->
+    <section class="bg-indigo-50 py-16">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-10 text-gray-800">Shop by Category</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                    <img src="https://placehold.co/150x150/e0e7ff/4338ca?text=iPhone" alt="iPhones" class="mx-auto mb-4 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-2">iPhones</h3>
+                    <a href="/iphone/models.html" class="bg-indigo-600 text-white px-6 py-2 rounded-full hover:bg-indigo-700 transition duration-300 inline-block">Shop Now</a>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                    <img src="https://placehold.co/150x150/e0e7ff/4338ca?text=Samsung" alt="Samsung Galaxy" class="mx-auto mb-4 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-2">Samsung Galaxy</h3>
+                    <a href="/samsung/models.html" class="bg-indigo-600 text-white px-6 py-2 rounded-full hover:bg-indigo-700 transition duration-300 inline-block">Shop Now</a>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                    <img src="https://placehold.co/150x150/e0e7ff/4338ca?text=Tablets" alt="Tablets" class="mx-auto mb-4 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-2">Tablets</h3>
+                    <a href="/tablet/models.html" class="bg-indigo-600 text-white px-6 py-2 rounded-full hover:bg-indigo-700 transition duration-300 inline-block">Shop Now</a>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                    <img src="https://placehold.co/150x150/e0e7ff/4338ca?text=Google" alt="Google Phones" class="mx-auto mb-4 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-2">Google Phones</h3>
+                    <a href="/google/models.html" class="bg-indigo-600 text-white px-6 py-2 rounded-full hover:bg-indigo-700 transition duration-300 inline-block">Shop Now</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Popular Phones We Buy -->
+    <section class="container mx-auto px-4 py-16">
+        <h2 class="text-3xl font-bold text-center mb-10 text-gray-800">Popular Phones We Buy</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            <!-- iPhone 15 Pro Max -->
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <img src="https://placehold.co/150x150/f0f4ff/6366f1?text=iPhone+15" alt="iPhone 15 Pro Max" class="mx-auto mb-4 rounded-lg">
+                <h3 class="text-xl font-semibold mb-2">iPhone 15 Pro Max</h3>
+                <p class="text-indigo-600 font-bold mb-4">Starting from $700</p>
+                <a href="/phones/iphone-15-pro-max.html" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-full hover:bg-gray-300 transition duration-300 inline-block">Sell This</a>
+            </div>
+            <!-- iPhone 14 Pro -->
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <img src="https://placehold.co/150x150/f0f4ff/6366f1?text=iPhone+14" alt="iPhone 14 Pro" class="mx-auto mb-4 rounded-lg">
+                <h3 class="text-xl font-semibold mb-2">iPhone 14 Pro</h3>
+                <p class="text-indigo-600 font-bold mb-4">Starting from $450</p>
+                <a href="/phones/iphone-14-pro.html" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-full hover:bg-gray-300 transition duration-300 inline-block">Sell This</a>
+            </div>
+            <!-- iPhone 13 -->
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <img src="https://placehold.co/150x150/f0f4ff/6366f1?text=iPhone+13" alt="iPhone 13" class="mx-auto mb-4 rounded-lg">
+                <h3 class="text-xl font-semibold mb-2">iPhone 13</h3>
+                <p class="text-indigo-600 font-bold mb-4">Starting from $400</p>
+                <a href="/phones/iphone-13.html" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-full hover:bg-gray-300 transition duration-300 inline-block">Sell This</a>
+            </div>
+            <!-- Samsung Galaxy S24 Ultra -->
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <img src="https://placehold.co/150x150/f0f4ff/6366f1?text=S24+Ultra" alt="Samsung Galaxy S24 Ultra" class="mx-auto mb-4 rounded-lg">
+                <h3 class="text-xl font-semibold mb-2">Samsung Galaxy S24 Ultra</h3>
+                <p class="text-indigo-600 font-bold mb-4">Starting from $600</p>
+                <a href="/phones/samsung-galaxy-s24-ultra.html" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-full hover:bg-gray-300 transition duration-300 inline-block">Sell This</a>
+            </div>
+            <!-- Samsung Galaxy S22 -->
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <img src="https://placehold.co/150x150/f0f4ff/6366f1?text=S22" alt="Samsung Galaxy S22" class="mx-auto mb-4 rounded-lg">
+                <h3 class="text-xl font-semibold mb-2">Samsung Galaxy S22</h3>
+                <p class="text-indigo-600 font-bold mb-4">Starting from $250</p>
+                <a href="/phones/samsung-galaxy-s22.html" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-full hover:bg-gray-300 transition duration-300 inline-block">Sell This</a>
+            </div>
+            <!-- Google Pixel 8 -->
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <img src="https://placehold.co/150x150/f0f4ff/6366f1?text=Pixel+8" alt="Google Pixel 8" class="mx-auto mb-4 rounded-lg">
+                <h3 class="text-xl font-semibold mb-2">Google Pixel 8</h3>
+                <p class="text-indigo-600 font-bold mb-4">Starting from $400</p>
+                <a href="/phones/google-pixel-8.html" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-full hover:bg-gray-300 transition duration-300 inline-block">Sell This</a>
+            </div>
+            <!-- Tablet iPad Pro (M2) -->
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <img src="https://placehold.co/150x150/f0f4ff/6366f1?text=iPad+Pro" alt="Tablet iPad Pro (M2)" class="mx-auto mb-4 rounded-lg">
+                <h3 class="text-xl font-semibold mb-2">Tablet iPad Pro (M2)</h3>
+                <p class="text-indigo-600 font-bold mb-4">Starting from $550</p>
+                <a href="/phones/ipad-pro-m2.html" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-full hover:bg-gray-300 transition duration-300 inline-block">Sell This</a>
+            </div>
+            <!-- Samsung Galaxy Tab S9 Ultra -->
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300">
+                <img src="https://placehold.co/150x150/f0f4ff/6366f1?text=Tab+S9" alt="Samsung Galaxy Tab S9 Ultra" class="mx-auto mb-4 rounded-lg">
+                <h3 class="text-xl font-semibold mb-2">Samsung Galaxy Tab S9 Ultra</h3>
+                <p class="text-indigo-600 font-bold mb-4">Starting from $400</p>
+                <a href="/phones/samsung-galaxy-tab-s9-ultra.html" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-full hover:bg-gray-300 transition duration-300 inline-block">Sell This</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- What Customers Are Saying -->
+    <section class="bg-indigo-50 py-16">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-10 text-gray-800">What Customers Are Saying</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-lg flex items-start space-x-4">
+                    <div class="text-4xl">🚀</div>
+                    <div>
+                        <p class="text-gray-700 mb-2">"Extremely fast delivery and excellent communication throughout the process!"</p>
+                        <p class="font-semibold text-gray-800">- Happy Seller</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg flex items-start space-x-4">
+                    <div class="text-4xl">😊</div>
+                    <div>
+                        <p class="text-gray-700 mb-2">"Customer service was excellent and timely; they answered all my questions."</p>
+                        <p class="font-semibold text-gray-800">- Satisfied Customer</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg flex items-start space-x-4">
+                    <div class="text-4xl">💸</div>
+                    <div>
+                        <p class="text-gray-700 mb-2">"Phone was in great shape for a great price, totally worth it!"</p>
+                        <p class="font-semibold text-gray-800">- Smart Buyer</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg flex items-start space-x-4">
+                    <div class="text-4xl">⭐</div>
+                    <div>
+                        <p class="text-gray-700 mb-2">"Easy order, efficient process, and clear communication every step of the way."</p>
+                        <p class="font-semibold text-gray-800">- Verified Purchase</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg flex items-start space-x-4">
+                    <div class="text-4xl">👍</div>
+                    <div>
+                        <p class="text-gray-700 mb-2">"Got more than I expected for my old phone. Smooth transaction!"</p>
+                        <p class="font-semibold text-gray-800">- Delighted Seller</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg flex items-start space-x-4">
+                    <div class="text-4xl">🌟</div>
+                    <div>
+                        <p class="text-gray-700 mb-2">"The best experience selling a device online. Highly recommend SwiftBuyBack!"</p>
+                        <p class="font-semibold text-gray-800">- Enthusiastic User</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Footer -->
-    <footer class="w-full bg-gray-900 text-white py-8 mt-12 rounded-lg">
-        <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+    <footer class="bg-gray-800 text-white py-12 mt-8 rounded-t-3xl mx-auto max-w-7xl shadow-lg">
+        <div class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <div>
-                <h3 class="text-xl font-bold mb-4 text-indigo-400">SwiftBuyBack</h3>
-                <p class="text-gray-400 text-sm">Your trusted partner for selling used smartphones. Quick quotes, fair prices, and hassle-free service.</p>
+                <h3 class="text-xl font-bold mb-4">SwiftBuyBack</h3>
+                <p class="text-gray-400">Your trusted partner for selling used smartphones. Quick quotes, fair prices, and hassle-free service.</p>
             </div>
             <div>
-                <h3 class="text-xl font-bold mb-4 text-indigo-400">Quick Links</h3>
+                <h3 class="text-xl font-bold mb-4">Quick Links</h3>
                 <ul class="space-y-2">
-                    <li><a href="#" onclick="main.navigateTo('index.html')" class="text-gray-400 hover:text-white transition duration-200">Home</a></li>
-                    <li><a href="#" onclick="main.navigateTo('sell.html')" class="text-gray-400 hover:text-white transition duration-200">Sell Your Phone</a></li>
-                    <li><a href="#" onclick="main.navigateTo('profile.html', { view: 'dashboard' })" class="text-gray-400 hover:text-white transition duration-200">My Account</a></li>
-                    <li><a href="#" class="text-gray-400 hover:text-white transition duration-200">About Us</a></li>
-                    <li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Contact</a></li>
+                    <li><a href="index.html" class="text-gray-400 hover:text-white transition duration-300">Home</a></li>
+                    <li><a href="/sell-device.html" class="text-gray-400 hover:text-white transition duration-300">Sell Your Phone</a></li>
+                    <li><a href="/my-account.html" class="text-gray-400 hover:text-white transition duration-300">My Account</a></li>
+                    <li><a href="/about-us.html" class="text-gray-400 hover:text-white transition duration-300">About Us</a></li>
+                    <li><a href="/contact.html" class="text-gray-400 hover:text-white transition duration-300">Contact</a></li>
                 </ul>
             </div>
-            <div>
-                <h3 class="text-xl font-bold mb-4 text-indigo-400">Connect With Us</h3>
-                <div class="flex space-x-4">
-                    <!-- Placeholder Social Icons (using simple text/emojis for now) -->
-                    <a href="#" class="text-gray-400 hover:text-white transition duration-200 text-2xl">😊</a>
-                    <a href="#" class="text-gray-400 hover:text-white transition duration-200 text-2xl">👍</a>
-                    <a href="#" class="text-gray-400 hover:text-white transition duration-200 text-2xl">🌟</a>
-                </div>
-                <p class="text-gray-400 text-sm mt-4">&copy; 2024 SwiftBuyBack. All rights reserved.</p>
+            <div class="md:col-span-2 lg:col-span-1">
+                <h3 class="text-xl font-bold mb-4">Contact Us</h3>
+                <p class="text-gray-400">Email: info@swiftbuyback.com</p>
+                <p class="text-400">Phone: (123) 456-7890</p>
+                <p class="text-gray-400 mt-4">&copy; 2025 SwiftBuyBack. All rights reserved.</p>
             </div>
         </div>
     </footer>
 
-    <!-- Main JavaScript for this page -->
-    <script type="module">
-        import * as main from './js/main.js'; // Import all exports from main.js
-        window.main = main; // Make main module accessible globally for inline onclicks
-
-        window.onload = function() {
-            main.initApp('home');
-        };
-    </script>
 </body>
 </html>
